@@ -24,14 +24,31 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Configure Git identity
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+      - name: Remove GitHub Actions workflows from Gitea mirror
+        run: |
+          set -euo pipefail
+
+          # Gitea.com supports GitHub Actions-compatible workflows and may try
+          # to run .github/workflows/*.yml from the mirrored repository.
+          # This repository is only a mirror, so workflows must stay only on GitHub.
+          git rm -rf .github/workflows 2>/dev/null || true
+
+          if ! git diff --cached --quiet; then
+            git commit -m "Remove GitHub Actions workflows from Gitea mirror"
+          else
+            echo "No workflow files to remove for Gitea mirror"
+          fi
+
       - name: Push main branch to Gitea
         env:
           GITEA_TOKEN: ${{ secrets.GITEA_MIRROR_TOKEN }}
         run: |
           set -euo pipefail
-
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
 
           git remote remove gitea 2>/dev/null || true
           git remote add gitea "https://igareck:${GITEA_TOKEN}@gitea.com/igareck/vpn-configs-for-russia.git"
